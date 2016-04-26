@@ -1,7 +1,7 @@
 // Variables
 var fs = require('fs'), prices, discount, filename = 'discnt.in';
 
-//Functions
+// Functions
 function getSum(a, b) {
     return a + b;
 }
