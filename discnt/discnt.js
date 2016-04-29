@@ -2,14 +2,6 @@
 var fs = require('fs'), prices, discount, filename = 'discnt.in';
 
 // Functions
-function getSum(a, b) {
-    return a + b;
-}
-
-function compare(a, b) {
-    return a > b;
-}
-
 function logErrors(err) {
     if (err) {
 	return console.log(err);
@@ -17,22 +9,19 @@ function logErrors(err) {
 }
 
 function sort(arr) {
-    var max_index = 0, counter = '';
+    var max_index = 0;
     for (var i = 2, length = arr.length; i < length; i += 3) {
-	counter=i;
 	for (var j = 0, length = arr.length; j < length; j++) {
-	    if ((j + 1) % 3 == 0 && j <= counter && j !== i) {
+	    if ((j + 1) % 3 == 0 && j <= i && j !== i) {
 		continue;
 	    }
 
-	    if (compare(arr[j], arr[max_index])) {
+	    if (arr[j] > arr[max_index]) {
 		max_index = j;
 	    }
-	}	
-	
+	}		
 	arr[i] = [ arr[max_index], arr[max_index] = arr[i] ][0];	
-	arr[i] -= arr[i] * (discount / 100);
-
+	arr[i] *= (1 - discount / 100);
     }
     return arr;
 }
@@ -50,7 +39,7 @@ fs.readFile(filename, 'utf8', function(err, data) {
     sort(prices);
 
     // Get minimum amount of purchase 
-    totalMinPrice = prices.reduce(getSum);
+     totalMinPrice = prices.reduce(function(a, b) { return a + b; }, 0);
 
     // Write to file   
     fs.writeFile('discnt.out', totalMinPrice.toFixed(2), 'utf8', function(err) {
