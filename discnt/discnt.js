@@ -8,19 +8,55 @@ function logErrors(err) {
     }
 }
 
-function sort(arr) {
-    var max_index = 0;
-    for (var i = 2, length = arr.length; i < length; i += 3) {
-	for (var j = 0, length = arr.length; j < length; j++) {
-	    if ((j + 1) % 3 == 0 && j <= i && j !== i) {
-		continue;
-	    }
+function swap(arr, firstIndex, secondIndex) {
+    var temp = arr[firstIndex];
+    arr[firstIndex] = arr[secondIndex];
+    arr[secondIndex] = temp;
+}
 
-	    if (arr[j] > arr[max_index]) {
-		max_index = j;
-	    }
-	}		
-	arr[i] = [ arr[max_index], arr[max_index] = arr[i] ][0];	
+function partition(arr, left, right) {
+    var pivot = arr[Math.floor((right + left) / 2)]; 
+    var leftWritePos = left;
+    var rightWritePos = right;
+
+    while (leftWritePos <= rightWritePos) {
+	while (arr[leftWritePos] < pivot) {
+	    leftWritePos++;
+	}
+	while (arr[rightWritePos] > pivot) {
+	    rightWritePos--;
+	}
+
+	if (leftWritePos <= rightWritePos) {
+	    swap(arr, leftWritePos, rightWritePos);
+	    leftWritePos++;
+	    rightWritePos--;
+	}
+    }
+    return leftWritePos;
+}
+
+function quickSort(arr, left, right) {
+    var index, left, right;
+    if (arr.length > 1) {
+	left = typeof left != "number" ? 0 : left;
+	right = typeof right != "number" ? items.length - 1 : right;
+
+	index = partition(arr, left, right);
+
+	if (left < index - 1) {
+	    quickSort(arr, left, index - 1);
+	}
+
+	if (index < right) {
+	    quickSort(arr, index, right);
+	}
+    }
+    return arr;
+}
+
+function applyDiscount(arr, discount) {
+    for (var length = arr.length, i = length - Math.floor(length / 3); i < length; i++) {
 	arr[i] *= (1 - discount / 100);
     }
     return arr;
@@ -36,10 +72,15 @@ fs.readFile(filename, 'utf8', function(err, data) {
     discount = data.substring(data.indexOf('\n') + 1);
 
     // Sort array with prices in ascending order
-    sort(prices);
+    quickSort(prices, 0, prices.length - 1);
+
+    // Apply Discount
+    applyDiscount(prices, discount);
 
     // Get minimum amount of purchase 
-     totalMinPrice = prices.reduce(function(a, b) { return a + b; }, 0);
+    totalMinPrice = prices.reduce(function(a, b) {
+	return a + b;
+    }, 0);
 
     // Write to file   
     fs.writeFile('discnt.out', totalMinPrice.toFixed(2), 'utf8', function(err) {
