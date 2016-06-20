@@ -3,108 +3,122 @@ function readFile(fs, inputFilename, encoding) {
 
     for (var i = 0, length = data.length; i < length; i++) {
 	if (data[i].length > 0) {
-	    pairs.push(data[i].split(' '));
+	    //data[i] = data[i].trim();
+	    //pairs.push(data[i].split(' '));
+	    //data[i] = data[i].split(' ');
 	}
     }
-    return pairs;
+    return data;
 }
 
 function writeFile(fs, outputFilename, data, encoding) {
     fs.writeFileSync(outputFilename, data, encoding);
 }
 
-function buildGraph(pairs) {
-    var graph = {}, doc = '', relatedDoc = '';
-
-    for (var i = 0, length = pairs.length; i < length; i++) {
-	if (!(pairs[i][0] in graph)) {
-	    graph[pairs[i][0]] = [];
-	}
-	if (!(pairs[i][1] in graph)) {
-	    graph[pairs[i][1]] = [];
-	}
-	graph[pairs[i][0]].push(pairs[i][1]);
+var EdgeNode = (function () {
+    function EdgeNode(id) {
+        this.id = id;
+        this.afters = [];
     }
-    
-    //console.log(graph);
+    return EdgeNode;
+})();
 
-    return graph;
+function sortDesc(a, b) {
+    if (a < b)
+        return 1;
+    if (a > b)
+        return -1;
+    return 0;
 }
 
-function intersection(a, b) {
-    var t;
-    if (b.length > a.length) t = b, b = a, a = t; // indexOf to loop over shorter
-    return a.filter(function (e) {
-        if (b.indexOf(e) !== -1) return true;
+function topsort(edges, options) {
+    var nodes = {};
+
+    options = options || { continueOnCircularDependency: false };
+
+    var sorted = [];
+
+    // hash: id of already visited node => true
+    var visited = {};
+
+    // 1. build data structures
+    edges.forEach(function (edge) {
+
+	edge = edge.split(' ');
+        var fromEdge = edge[0];
+        var fromStr = fromEdge.toString();
+        var fromNode;
+
+        if (!(fromNode = nodes[fromStr])) {
+            fromNode = nodes[fromStr] = new EdgeNode(fromEdge);
+            
+        }
+
+        edge.forEach(function (toEdge) {
+            // since from and to are in same array, we'll always see from again, so make sure we skip it..
+            if (toEdge == fromEdge) {
+                return;
+            }
+            
+            
+
+            var toEdgeStr = toEdge.toString();
+            
+            if (!nodes[toEdgeStr]) {
+                nodes[toEdgeStr] = new EdgeNode(toEdge);
+            }
+            if (typeof fromNode.afters == "undefined") {
+        	fromNode.afters = [];
+	    }
+            fromNode.afters.push(toEdge);   
+            
+        });
+        
     });
-}
 
-function printObject(obj) {
-    var str = '';
-    for ( var prop in obj) {
-	str += (prop + ': ' + obj[prop] + '\n');
-    }
-    
-    return str;
-}
+    // 2. topological sort
+    var keys = Object.keys(nodes);
+    keys.sort(sortDesc);
+    keys.forEach(function visit(idstr, ancestorsIn) {
+        var node = nodes[idstr];
+        var id = node.id;
 
-function tarjan(graph) {
-    var topologicalOrder = [], 
-    	topologicalOrderSet = [], 
-    	unvisitedVertices = Object.keys(graph);
-    
-    //console.log("unvisited vertices: " + unvisitedVertices);
-    //console.log("graph: " + printObject(graph));
-    
-    function dfsStack(startVertex) {
-	var stack, 
-	    vertex, 
-	    pos = 0, 
-	    unvisitedNeighbors;
+        // if already exists, do nothing
+        if (visited[idstr]) {
+            return;
+        }
 
-	stack = [ startVertex ];
-	
-	//console.log("stack: " + stack);
-	//console.log("stack length: " + stack.length);
-	while (stack.length > 0) {
-	    vertex = stack.pop();
-	    //console.log("vertex: " + vertex);
-	    pos = unvisitedVertices.indexOf(vertex);
-	    
-	    if (pos > -1) {
-		unvisitedVertices.splice(pos, 1);
-	    }
-	    //console.log("unvisitedVertices: " + unvisitedVertices);
-	    //console.log("graph vertex: " + graph[vertex]);
-	    unvisitedNeighbors = intersection(graph[vertex], unvisitedVertices);
-	    //console.log("unvisitedNeighbors: " + unvisitedNeighbors);
-	    
-	    if (unvisitedNeighbors.length == 0) {
-		if (!topologicalOrderSet.indexOf(vertex) > -1) {
-		    topologicalOrder.push(vertex);
-		    topologicalOrderSet.push(vertex);
-		}
-	    } else {
-		stack.push(vertex);
-		//console.log("new stack 1: " + stack);
-		stack = stack.concat(unvisitedNeighbors);
-		//console.log("new stack 2: " + stack);
-	    }
-	}
-    }
-    
-    
-    while (unvisitedVertices.length > 0) {	
-	dfsStack(unvisitedVertices.pop());
-    }
+        var ancestors = Array.isArray(ancestorsIn) ? ancestorsIn : [];
 
-    return topologicalOrder;
+        ancestors.push(id);
+        visited[idstr] = true;
+
+        node.afters.sort(sortDesc);
+        node.afters.forEach(function (afterID) {
+            // if already in ancestors, a closed chain exists.
+            if (ancestors.indexOf(afterID) >= 0) {
+                if (options.continueOnCircularDependency) {
+                    return;
+                }
+                throw new Error('Circular chain found: ' + id + ' must be before ' + afterID + ' due to a direct order specification, but ' + afterID + ' must be before ' + id + ' based on other specifications.');
+            }
+
+            // recursive call
+            visit(afterID.toString(), ancestors.map(function (v) {
+                return v;
+            }));
+        });
+
+        sorted.unshift(id);
+    });
+
+    return sorted;
 }
 
 function getResult(pairs) {
-    var graph = buildGraph(pairs), orderedDocs = '';
+    var orderedDocs = '';
 
-    orderedDocs = tarjan(graph);
+    orderedDocs = topsort(pairs);
 
     return orderedDocs;
 }
@@ -120,10 +134,9 @@ function getResult(pairs) {
     pairs = readFile(fs, inputFilename, encoding);
     orderedDocs = getResult(pairs);
     
-    for (var i = 0, length = orderedDocs.length; i < length; i++) {
+    for (var i = orderedDocs.length - 1; i >= 0; i--) {
 	correctOrder += (orderedDocs[i] + '\n');
     }
     
-    //console.log(orderedDocs);
-    writeFile(fs, outputFilename, correctOrder, encoding);
+    writeFile(fs, outputFilename,correctOrder, encoding);
 })();
