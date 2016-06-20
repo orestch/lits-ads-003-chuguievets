@@ -1,7 +1,6 @@
 function readFile(fs, inputFilename, encoding) {
-    var data = fs.readFileSync(inputFilename, encoding).split('\n'), pairs = [];
-
-    return data;
+    var data = fs.readFileSync(inputFilename, encoding).toUpperCase().split('\n'), pairs = [];
+    return data.slice(0, data.length - 1);
 }
 
 function writeFile(fs, outputFilename, data, encoding) {
@@ -32,8 +31,8 @@ function topsort(edges, options) {
     var sorted = [];
 
     // hash: id of already visited node => true
-    var visited = {};
-
+    var visited = {};    
+    
     // 1. build data structures
     edges.forEach(function (edge) {
 
@@ -44,27 +43,21 @@ function topsort(edges, options) {
 
         if (!(fromNode = nodes[fromStr])) {
             fromNode = nodes[fromStr] = new EdgeNode(fromEdge);
-            
         }
 
         edge.forEach(function (toEdge) {
             // since from and to are in same array, we'll always see from again, so make sure we skip it..
             if (toEdge == fromEdge) {
                 return;
-            }
-            
-            
+            }                    
 
             var toEdgeStr = toEdge.toString();
             
             if (!nodes[toEdgeStr]) {
                 nodes[toEdgeStr] = new EdgeNode(toEdge);
-            }
-            if (typeof fromNode.afters == "undefined") {
-        	fromNode.afters = [];
-	    }
+            }                 
+
             fromNode.afters.push(toEdge);   
-            
         });
         
     });
@@ -100,11 +93,10 @@ function topsort(edges, options) {
             visit(afterID.toString(), ancestors.map(function (v) {
                 return v;
             }));
-        });
+        });        
 
         sorted.unshift(id);
     });
-
     return sorted;
 }
 
@@ -125,11 +117,12 @@ function getResult(pairs) {
     	correctOrder = '';
 
     pairs = readFile(fs, inputFilename, encoding);
+    
     orderedDocs = getResult(pairs);
     
-    for (var i = orderedDocs.length - 1; i > 0; i--) {
+    for (var i = orderedDocs.length - 1; i >= 0; i--) {
 	correctOrder += (orderedDocs[i] + '\n');
     }
     
-    writeFile(fs, outputFilename,correctOrder, encoding);
+    writeFile(fs, outputFilename,correctOrder.toLowerCase(), encoding);
 })();
