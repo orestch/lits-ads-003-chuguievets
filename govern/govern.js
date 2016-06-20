@@ -1,13 +1,6 @@
 function readFile(fs, inputFilename, encoding) {
     var data = fs.readFileSync(inputFilename, encoding).split('\n'), pairs = [];
 
-    for (var i = 0, length = data.length; i < length; i++) {
-	if (data[i].length > 0) {
-	    //data[i] = data[i].trim();
-	    //pairs.push(data[i].split(' '));
-	    //data[i] = data[i].split(' ');
-	}
-    }
     return data;
 }
 
