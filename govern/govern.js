@@ -134,7 +134,7 @@ function getResult(pairs) {
     pairs = readFile(fs, inputFilename, encoding);
     orderedDocs = getResult(pairs);
     
-    for (var i = orderedDocs.length - 1; i >= 0; i--) {
+    for (var i = orderedDocs.length - 1; i > 0; i--) {
 	correctOrder += (orderedDocs[i] + '\n');
     }
     
