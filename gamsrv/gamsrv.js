@@ -1,43 +1,35 @@
 /* Vertex class */
-var Vertex = (function () {
-    function Vertex(label, isClient) {
+var Vertex = function(label, isClient) {
         this.label = label;
         this.isClient = isClient;
         this.outboundEdges = [];
     }
-    return Vertex;
-})();
 
-Vertex.prototype.stringify = function() {
+
+/*Vertex.prototype.stringify = function() {
 	return "Label: " + this.label + "\nEdges: " + this.outboundEdges.join(', ');
 }
 
 Vertex.prototype.getLabel = function() {
 	return this.label;
-}
+}*/
 
 /* Edge class */
-var Edge = (function () {
-    function Edge(startVertex, endVertex, weight) {
+var Edge = function Edge(startVertex, endVertex, weight) {
         this.startVertex = startVertex;
         this.endVertex = endVertex;
         this.weight = weight;
-    }
-    return Edge;
-})();
-
-Edge.prototype.stringify = function() {
-	return this.startVertex.getLabel() + " ---" + this.weight + "---> " + this.endVertex.getLabel();
 }
 
+/*Edge.prototype.stringify = function() {
+	return this.startVertex.getLabel() + " ---" + this.weight + "---> " + this.endVertex.getLabel();
+}*/
+
 /* Graph class */
-var Graph = (function () {
-    function Graph(vertices, edges) {
+var Graph = function Graph(vertices, edges) {
         this.vertices = vertices;
         this.edges = edges;
-    }
-    return Graph;
-})();
+}
 
 /* Read input file and return the Graph object */
 function readFile(fs, inputFilename, encoding) {
@@ -227,7 +219,7 @@ function dijkstra(graph, startVertex) {
 		neighborVertex = 0,
 		alternativeDistance = 0;
 	
-	for (var i = 0; i < graph.vertices.length; i++) {
+	for (var i = 0, length = graph.vertices.length; i < length; i++) {
 		distances.push(Infinity);
 	}	
 	
@@ -240,7 +232,7 @@ function dijkstra(graph, startVertex) {
 		distance = heapCol[0];
 		shortestDistanceLabel = heapCol[1];
 		shortestDistanceVertex = graph.vertices[shortestDistanceLabel];
-		for (var i = 0; i < shortestDistanceVertex.outboundEdges.length; i++) {
+		for (var i = 0, length = shortestDistanceVertex.outboundEdges.length; i < length; i++) {
 			neighborVertex = shortestDistanceVertex.outboundEdges[i].endVertex;
 			alternativeDistance = distances[shortestDistanceVertex.label] + shortestDistanceVertex.outboundEdges[i].weight;			
 			if (alternativeDistance < distances[neighborVertex.label]) {
@@ -250,7 +242,7 @@ function dijkstra(graph, startVertex) {
 		}
 	}
 	
-	for (var i = 0; i < graph.vertices.length; i++) {
+	for (var i = 0, length = graph.vertices.length; i < length; i++) {
 		result.push([distances[graph.vertices[i].label], graph.vertices[i].isClient]);
 	}
 
@@ -263,22 +255,17 @@ function getResult(graph) {
     	distances = 0,
     	maxTimeoutVert;
     
-    for (var i = 0; i < graph.vertices.length; i++) {
+    for (var i = 0, length = graph.vertices.length; i < length; i++) {
     	maxTimeoutVert = -Infinity;
 		if (!graph.vertices[i].isClient) {
 			distances = dijkstra(graph, graph.vertices[i]);
-			//console.log(distances);
-			for (var j = 0; j < distances.length; j++) {
+			for (var j = 0, dislength = distances.length; j < dislength; j++) {
 				if (distances[j][1] && distances[j][0] > maxTimeoutVert) {
 					maxTimeoutVert = distances[j][0];
-					// console.log(maxTimeoutVert);
 				}
 			}
-			//console.log("maxTimeout1: " + maxTimeout);
-			//console.log("maxTimeoutVert: " + maxTimeoutVert);
 			
 			maxTimeout = Math.min(maxTimeout, maxTimeoutVert);
-			// max_latency = min(max_latency, max(latency for (latency, is_client) in distances if is_client))
 		}
 	}    
     
@@ -300,6 +287,6 @@ function writeFile(fs, outputFilename, data, encoding) {
     	maxTimeout = 0;
     
     maxTimeout = getResult(graph);
-    //console.log("maxTimeout: " + maxTimeout);
+    console.log("maxTimeout: " + maxTimeout);
     writeFile(fs, outputFilename, maxTimeout, encoding);
 })();
