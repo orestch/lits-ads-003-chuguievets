@@ -202,6 +202,5 @@ function getResult(wordsCount, words) {
     	words = data[1],
     	maxChain = 0;
     maxChain = getResult(wordsCount, words);
-    //console.log("maxChain: " + maxChain);
-    //writeFile(fs, outputFilename, maxExperience, encoding);
+    writeFile(fs, outputFilename, maxChain, encoding);
 })();
