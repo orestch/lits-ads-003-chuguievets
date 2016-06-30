@@ -1,206 +1,74 @@
-/* Read input file and return the Graph object */
-function readFile(fs, inputFilename, encoding) {
-    var data = fs.readFileSync(inputFilename, encoding).split('\n'),
-    	wordsCount = parseInt(data[0]),    	
-    	words = [];    	        
-    
-    words = data.slice(1, data.length - 1);    
-       
-    return [wordsCount, words];
-}
+"use strict";
 
-function writeFile(fs, outputFilename, data, encoding) {
-    fs.writeFileSync(outputFilename, data, encoding);
-}
+var fs = require("fs");
 
-/* Calculate Levenstein Distance */
-function getEditDistance(a, b){
-	  if(a.length == 0) return b.length; 
-	  if(b.length == 0) return a.length; 
-
-	  var matrix = [];
-
-	  // increment along the first column of each row
-	  var i;
-	  for(i = 0; i <= b.length; i++){
-	    matrix[i] = [i];
-	  }
-
-	  // increment each column in the first row
-	  var j;
-	  for(j = 0; j <= a.length; j++){
-	    matrix[0][j] = j;
-	  }
-
-	  // Fill in the rest of the matrix
-	  for(i = 1; i <= b.length; i++){
-	    for(j = 1; j <= a.length; j++){
-	      if(b.charAt(i-1) == a.charAt(j-1)){
-	        matrix[i][j] = matrix[i-1][j-1];
-	      } else {
-	        matrix[i][j] = Math.min(matrix[i-1][j-1] + 1, // substitution
-	                                Math.min(matrix[i][j-1] + 1, // insertion
-	                                         matrix[i-1][j] + 1)); // deletion
-	      }
-	    }
-	  }
-
-	  return matrix[b.length][a.length];
+var readInput = function(fileName) {
+    var fileLines = fs.readFileSync(fileName).toString().split("\n");
+    var wordCount = parseInt(fileLines[0], 10);
+    var words = fileLines.slice(1, wordCount + 1);
+    return words;
 };
 
-/* Calcucate the maximum experience to reach */
-function calcucateMaxChain(wordsCount, words) {	
-	var hashtable = [],
-		maxChain = 0
-		words.sort();
-	
+var solve = function(words) {
+    var maxWordLength = 50;
 
-	for (var i = 0; i < wordsCount - 1; i++) {
+    // Generates all possible words with one less letter from the specified word.
+    var generateSmallerWords = function(word) {
+        var smallerWords = [];
+        for (var removalIndex = 0; removalIndex < word.length; removalIndex++) {
+            smallerWords.push(word.substring(0, removalIndex) + word.substring(removalIndex + 1, word.length));
+        }
+        return smallerWords;
+    };
 
-		for (var j = i + 1; j < wordsCount; j++) {
-
-			if (words[i].length > words[j].length) {
-				continue;
-			}
-			if (getEditDistance(words[i], words[j]) == 1) {				
-					hashtable.push(words[i] + ' ' + words[j]);	
-			}			
-		}
-	}	
-	return hashtable;
-}
-
-var EdgeNode = (function () {
-    function EdgeNode(id) {
-        this.id = id;
-        this.afters = [];
+    // Splitting the words into buckets according to their lengths.
+    var buckets = [];
+    for (var i = 0; i <= maxWordLength; i++) {
+        buckets.push({});
     }
-    return EdgeNode;
-})();
-
-function sortDesc(a, b) {
-    if (a < b)
-        return 1;
-    if (a > b)
-        return -1;
-    return 0;
-}
-
-function topsort(edges, options) {
-    var nodes = {};
-
-    options = options || { continueOnCircularDependency: false };
-
-    var sorted = [];
-
-    // hash: id of already visited node => true
-    var visited = {};    
-    
-    // 1. build data structures
-    edges.forEach(function (edge) {
-
-	edge = edge.split(' ');
-        var fromEdge = edge[0];
-        var fromStr = fromEdge.toString();
-        var fromNode;
-
-        if (!(fromNode = nodes[fromStr])) {
-            fromNode = nodes[fromStr] = new EdgeNode(fromEdge);
-        }
-
-        edge.forEach(function (toEdge) {
-            // since from and to are in same array, we'll always see from again, so make sure we skip it..
-            if (toEdge == fromEdge) {
-                return;
-            }                    
-
-            var toEdgeStr = toEdge.toString();
-            
-            if (!nodes[toEdgeStr]) {
-                nodes[toEdgeStr] = new EdgeNode(toEdge);
-            }                 
-
-            fromNode.afters.push(toEdge);   
-        });
-        
+    words.forEach(function(word) {
+        buckets[word.length][word] = 1;
     });
 
-    // 2. topological sort
-    var keys = Object.keys(nodes);
-    keys.sort(sortDesc);
-    keys.forEach(function visit(idstr, ancestorsIn) {
-        var node = nodes[idstr];
-        var id = node.id;
+    // Iterating through every length bucket.
+    for (var i = 2; i <= maxWordLength; i++) {
 
-        // if already exists, do nothing
-        if (visited[idstr]) {
-            return;
-        }
+        // Iterating through every word in this bucket.
+        Object.keys(buckets[i]).forEach(function(word) {
 
-        var ancestors = Array.isArray(ancestorsIn) ? ancestorsIn : [];
-
-        ancestors.push(id);
-        visited[idstr] = true;
-
-        node.afters.sort(sortDesc);
-        node.afters.forEach(function (afterID) {
-            // if already in ancestors, a closed chain exists.
-            if (ancestors.indexOf(afterID) >= 0) {
-                if (options.continueOnCircularDependency) {
-                    return;
+            // For this word, we'll generate all possible words with one less letter, and
+            // check whether the previous bucket contains any of these smaller words.
+            var maxChainLengthForSmallerWord = 0;
+            generateSmallerWords(word).forEach(function(smallerWord) {
+                if (buckets[i - 1].hasOwnProperty(smallerWord)) {
+                    maxChainLengthForSmallerWord = Math.max(maxChainLengthForSmallerWord, buckets[i - 1][smallerWord]);
                 }
-                throw new Error('Circular chain found: ' + id + ' must be before ' + afterID + ' due to a direct order specification, but ' + afterID + ' must be before ' + id + ' based on other specifications.');
-            }
+            });
 
-            // recursive call
-            visit(afterID.toString(), ancestors.map(function (v) {
-                return v;
-            }));
-        });        
+            // Using our new word, we can get a chain 1 item longer.
+            buckets[i][word] = maxChainLengthForSmallerWord + 1;
+        });
+    }
 
-        sorted.unshift(id);
+    // The maximum length chain does not necessarily start with the smallest word
+    // or end with the longest one, so we'll scan all buckets and find the maximum.
+    var maxChainLength = 0;
+    buckets.forEach(function(bucket) {
+        Object.keys(bucket).forEach(function(word) {
+            maxChainLength = Math.max(maxChainLength, bucket[word]);
+        });
     });
-    return sorted;
-}
 
-function uniq(a) {
-    var prims = {"boolean":{}, "number":{}, "string":{}}, objs = [];
+    return maxChainLength;
+};
 
-    return a.filter(function(item) {
-        var type = typeof item;
-        if(type in prims)
-            return prims[type].hasOwnProperty(item) ? false : (prims[type][item] = true);
-        else
-            return objs.indexOf(item) >= 0 ? false : objs.push(item);
-    });
-}
+var writeOutput = function(fileName, maxChainLength) {
+    fs.writeFileSync(fileName, maxChainLength);
+};
 
-/* Problem solving */
-function getResult(wordsCount, words) {
-	var result = false;
-	result = calcucateMaxChain(wordsCount, words);
+var inputFileName = process.argv[2] || "wchain.in";
+var outputFileName = process.argv[3] || "wchain.out";
 
-	//console.log(result)
-	orderedDocs = topsort(result);
-	orderedDocs = orderedDocs.map(function(elem) {
-		return elem.length;
-	})
-	orderedDocs = uniq(orderedDocs)
-	orderedDocs = orderedDocs.length
-	console.log(orderedDocs)
-    return orderedDocs;
-}
-
-/* Init */
-(function init() {
-    var inputFilename = 'wchain.in', 
-    	outputFilename = 'wchain.out', 
-    	encoding = 'utf8', 
-    	fs = require('fs'),
-    	data = readFile(fs, inputFilename, encoding),  
-    	wordsCount = data[0],
-    	words = data[1],
-    	maxChain = 0;
-    maxChain = getResult(wordsCount, words);
-    writeFile(fs, outputFilename, maxChain, encoding);
-})();
+var words = readInput(inputFileName);
+var maxChainLength = solve(words);
+writeOutput(outputFileName, maxChainLength);
